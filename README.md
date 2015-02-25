@@ -1,3 +1,4 @@
-Python scripts to convert commonly used brain mesh files between different file formats.
+Python scripts for simple operations on brain meshes.
 
-So far only ply and vtk format without texture can be read and written.
+* conversion between ply and vtk format (without texture yet)
+* evaluating volume sampling by mesh, e.g. after mesh simplification
