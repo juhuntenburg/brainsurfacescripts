@@ -7,13 +7,15 @@ from ply_rw import read_ply
 
 '''
 Counts how often each voxel in input volume is sampled by input mesh.
-Mesh and volume need to be in the same space.
+--------------------------------------------------------------------
+* Mesh and volume need to be in the same space.
+* Original idea Pierre-Louis Bazin
 '''
 # TO DO: allow transformation input, find a better way to get pixdims?
 
-vol_file = raw_input('volume file: ')  # /scr/ilz3/myelinconnect/old/KSYT_sub010/preprocessed/rest1_1/coregister/epi2highres_nonlin.nii.gz'
-surf = raw_input('surface file: ')  # /scr/ilz3/myelinconnect/surfaces/simplification_sub010/rh_avg_simple_a.ply'
-out = raw_input('output file: ')  # /scr/ilz3/myelinconnect/surfaces/simplification_sub010/rh_avg_simple_a_ply_qa.nii.gz'
+vol_file = raw_input('volume file: ')
+surf = raw_input('surface file: ') 
+out = raw_input('output file: ')  
 
 
 # load information from volume

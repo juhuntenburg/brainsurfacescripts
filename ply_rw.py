@@ -1,11 +1,13 @@
 # -*- coding: utf-8 -*-
+'''
+Functions to read and write ply files
+------------------------------------
+* read takes ply file and returns vertex and face array
+* write takes vertex and faces array and optional comment and returns ply file
+* reading and writing of texture not supported yet
 
+TO DO: add reading comments, reading and writing texture
 '''
-function to read ply files
----------------------------
-returns arrays of vertices and faces
-'''
-# TO DO: add reading comments and texture
 
 def read_ply(file):
     import numpy as np
@@ -33,15 +35,6 @@ def read_ply(file):
     
     return vertex_array, face_array
 
-
-'''
-function to write ply files
----------------------------
-uses arrays of vertices and faces
-to construct ply file
-can optionally take a comment
-'''
-# TO DO: add write texture
 
 def write_ply(filename, vertices, faces, comment=None):
     import numpy as np

@@ -1,11 +1,13 @@
 # -*- coding: utf-8 -*-
+'''
+Functions to read and write vtk files
+------------------------------------
+* read takes vtk file and returns vertex and face array
+* write takes vertex and faces array and optional comment and returns vtk file
+* reading and writing of texture not supported yet
 
+TO DO: add reading comments, reading and writing texture
 '''
-function to read vtk files
----------------------------
-returns arrays of vertices and faces
-'''
-# TO DO: add reading comments and texture
 
 def read_vtk(file):
     import numpy as np
@@ -53,16 +55,8 @@ def read_vtk(file):
     # faces = {'values' : face_array, 'number' : number_faces}
     
     return vertex_array, face_array
-        
 
-'''
-function to write vtk files
----------------------------
-uses arrays of vertices and faces
-to construct ply file
-can optionally take a comment
-'''
-# TO DO: add write texture
+
 
 def write_vtk(filename, vertices, faces, comment=None):
     import numpy as np
