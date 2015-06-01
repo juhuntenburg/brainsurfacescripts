@@ -12,5 +12,5 @@ comment = raw_input("comment (optional): ")
 if comment == "":
     comment = 'ply format converted from vtk'
 
-v, f = read_vtk(in_vtk)
+v, f, d= read_vtk(in_vtk)
 write_ply(out_ply, v, f, comment)

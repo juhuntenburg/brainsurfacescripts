@@ -25,13 +25,11 @@ def read_ply(file):
                             nrows=number_vertices, sep='\s*', header=None,
                             engine='python')
     vertex_array = np.array(vertex_df)
-    # vertices = {'values' : vertex_array, 'number' : number_vertices}
     # read face indices into dict
     face_df = pd.read_csv(file, skiprows=range(end_header + number_vertices + 1),
                           nrows=number_faces, sep='\s*', header=None,
                           engine='python')
     face_array = np.array(face_df.iloc[:, 1:4])
-    # faces = {'values' : face_array, 'number' : number_faces}
     
     return vertex_array, face_array
 
