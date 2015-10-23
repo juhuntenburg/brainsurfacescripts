@@ -1,4 +1,7 @@
-def graph_from_mesh(nodes, triangles, node_coords= False, edge_length=False):
+def graph_from_mesh(nodes, triangles, node_coords=False, edge_length=False):
+    '''
+    Creates a networkx graph from a mesh
+    '''
     
     import numpy as np
     import networkx as nx
