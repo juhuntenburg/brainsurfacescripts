@@ -87,7 +87,7 @@ def write_vtk(filename, vertices, faces, data=None, comment=None):
     with open(filename, 'a') as f:
         faces_df.to_csv(f, header=False, index=False, float_format='%.0f', sep=' ')
     # if there is data append second subheader and data
-    if data!=None:
+    if data != None:
         datapoints=data.shape[1]
         sub_header2=['POINT_DATA %i'%(number_data),
                      'SCALARS EmbedVertex float %i'%(datapoints),

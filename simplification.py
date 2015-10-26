@@ -111,6 +111,8 @@ def competetive_fast_marching(vertices, graph, seeds):
 
 
 def sample_simple(highres_data, labels):
+    
+    import numpy as np
     '''
     Computes the mean of data from highres mesh that is assigned to the same
     label (typical simple mesh vertices).
