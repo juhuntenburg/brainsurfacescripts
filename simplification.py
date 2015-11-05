@@ -3,6 +3,7 @@ def add_neighbours(node, length, graph, labels, tree):
     Find unlabelled neighbours of a node in the graph and add them to 
     AVLtree
     '''
+    import numpy as np
     # find direct neighbours of the node
     neighbours = np.array(graph.neighbors(node))
     # check that they don't already have a label
@@ -20,6 +21,8 @@ def find_voronoi_seeds(simple_vertices, complex_vertices):
     Finds those points on the complex mesh that correspoind best to the
     simple mesh while forcing a one-to-one mapping
     '''
+    import numpy as np
+    import scipy.spatial as spatial
     # make array for writing in final voronoi seed indices
     voronoi_seed_idx = np.zeros((simple_vertices.shape[0],), dtype='int64')-1
     missing = np.where(voronoi_seed_idx==-1)[0].shape[0]
@@ -65,6 +68,9 @@ def competetive_fast_marching(vertices, graph, seeds):
     Label all vertices on highres mesh to the closest seed vertex
     using a balanced binary search tree
     '''
+    import numpy as np
+    import sys
+    from bintrees import FastAVLTree
     # make a labelling container to be filled with the search tree
     # first column are the vertex indices of the complex mesh
     # second column are the labels from the simple mesh
@@ -81,7 +87,10 @@ def competetive_fast_marching(vertices, graph, seeds):
     for v in seeds:
         add_neighbours(v, 0, graph, labels, tree)
     # Competetive fast marching starting from voronoi seeds
+    printcount = 0
     while tree.count > 0:
+        
+        printcount += 1
         
         #pdb.set_trace()
         # pop the item with minimum edge length
@@ -104,8 +113,9 @@ def competetive_fast_marching(vertices, graph, seeds):
         else:
             break
         
-        #print 'tree '+str(tree.count)
-        #print 'labels '+str(np.where(labels[:,1]==-1)[0].shape[0])
+        if np.mod(printcount, 100) == 0.0:
+            print 'tree '+str(tree.count)
+            print 'labels '+str(np.where(labels[:,1]==-1)[0].shape[0])
     
     return labels
 
