@@ -137,3 +137,23 @@ def sample_simple(highres_data, labels):
         lowres_data[l] = patch_mean
     
     return lowres_data
+
+
+def sample_volume(nii_file, vertices):
+    '''
+    Samples volumetric data on surface mesh vertices
+    '''
+    import numpy as np
+    import nibabel as nb
+    
+    img = nb.load(nii_file)
+    affine = img.get_affine()
+    data = img.get_data()
+    
+    # for each vertex in the highres mesh find voxel it maps to
+    dim = -(np.round([affine[0,0], affine[1,1], affine[2,2]], 1))
+    idx = np.asarray(np.round(vertices/dim), dtype='int64')
+    data_mesh = data[idx[:,0],idx[:,1],idx[:,2]]
+    
+    return data_mesh
+    
