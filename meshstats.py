@@ -1,5 +1,6 @@
 #calculate edge lengths and face areas from vertex and face arrays
 def edges_areas_angles(vertices, faces):
+    import numpy as np
     
     edges=np.empty((faces.shape[0], 3))
     angles=np.empty((faces.shape[0], 3))
@@ -39,6 +40,8 @@ def edges_areas_angles(vertices, faces):
 
 # calculate some basic stats on mesh
 def meshstats(in_array):
+    import numpy as np
+    import scipy as sp
     
     array_mean = np.nanmean(in_array)
     array_sd = np.nanstd(in_array)
