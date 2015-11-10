@@ -94,6 +94,7 @@ def plot_surf_stat_map(coords, faces, stat_map=None,
 
 def _get_plot_stat_map_params(stat_map_data, vmax, symmetric_cbar, kwargs,
     force_min_stat_map_value=None):
+    import numpy as np
     """ Internal function for setting value limits for plot_stat_map and
     plot_glass_brain.
     The limits for the colormap will always be set to range from -vmax to vmax.
