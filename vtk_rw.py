@@ -10,6 +10,17 @@ TO DO: add reading comments
 '''
 
 def read_vtk(file):
+    
+    '''
+    Takes path to vtk file as input and reads it using pandas, 
+    returning vertices, faces and data as three numpy arrays.
+    
+    Usage:
+    ---------------------
+    vertices, faces, data = read_vtk('/path/to/vtk/file.vtk')
+
+    '''
+
     import pandas as pd
     import numpy as np
     # read full file while dropping empty lines 
@@ -54,6 +65,25 @@ def read_vtk(file):
 
 
 def write_vtk(filename, vertices, faces, data=None, comment=None):
+    
+    '''
+    Takes as input at least two numpy arrays containing vertex coordinates 
+    of shape (n_vertex,3)) and faces of shape (n_faces, 3) and writes them 
+    in vtk file format saving at the location specified by filename. 
+    
+    An additional array containing data as well a comment string can be 
+    specified. 
+    NOTE: The data array has to be of shape (n_vertex, n_datapoints). 
+    If n_datapoints is = 1, the second dimensions has to be one (n_vertex,) 
+    is not supported at the moment
+    
+    Usage:
+    ---------------------
+    write_vtk('/path/to/vtk/file.vtk', v_array, f_array)
+
+    '''
+    
+    
     import pandas as pd
     import numpy as np
     # infer number of vertices and faces
