@@ -12,6 +12,7 @@ def plot_surf_stat_map(coords, faces, stat_map=None,
                        threshold=None, bg_map=None,
                        alpha='auto',
                        vmax=None, symmetric_cbar="auto",
+                       figsize=None,
                        **kwargs):
     
     import numpy as np
@@ -35,7 +36,10 @@ def plot_surf_stat_map(coords, faces, stat_map=None,
         cmap = plt.cm.get_cmap(cmap)
 
     # initiate figure and 3d axes
-    fig = plt.figure()
+    if figsize is not None:
+        fig = plt.figure(figsize=figsize)
+    else:
+        fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d', xlim=limits, ylim=limits)
     ax.view_init(elev=elev, azim=azim)
     ax.set_axis_off()
