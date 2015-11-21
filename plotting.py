@@ -10,6 +10,7 @@ def plot_surf_stat_map(coords, faces, stat_map=None,
                        elev=0, azim=0,
                        cmap='coolwarm',
                        threshold=None, bg_map=None,
+                       bg_on_stat=False,
                        alpha='auto',
                        vmax=None, symmetric_cbar="auto",
                        figsize=None,
@@ -85,11 +86,17 @@ def plot_surf_stat_map(coords, faces, stat_map=None,
                 kept_indices = np.where(abs(stat_map_faces) >= threshold)[0]
                 stat_map_faces = stat_map_faces - vmin
                 stat_map_faces = stat_map_faces / (vmax-vmin)
-                face_colors[kept_indices] = cmap(stat_map_faces[kept_indices])
+                if bg_on_stat:
+                    face_colors[kept_indices] = cmap(stat_map_faces[kept_indices]) * face_colors[kept_indices]
+                else:
+                    face_colors[kept_indices] = cmap(stat_map_faces[kept_indices])
             else:
                 stat_map_faces = stat_map_faces - vmin
                 stat_map_faces = stat_map_faces / (vmax-vmin)
-                face_colors = cmap(stat_map_faces)
+                if bg_on_stat:
+                    face_colors = cmap(stat_map_faces) * face_colors
+                else:
+                    face_colors = cmap(stat_map_faces)
 
         p3dcollec.set_facecolors(face_colors)
 
