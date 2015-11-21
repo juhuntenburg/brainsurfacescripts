@@ -43,7 +43,7 @@ def read_vtk(file):
         vertex_array=np.append(vertex_array, vertex_df.iloc[0:1,6:9], axis=0)
         for row in range(1,(int(number_vertices/3)+1)):
             for col in [0,3,6]:
-                vertex_array=np.append(vertex_array, array(vertex_df.iloc[row:(row+1),col:(col+3)]),axis=0) 
+                vertex_array=np.append(vertex_array, np.array(vertex_df.iloc[row:(row+1),col:(col+3)]),axis=0) 
         # strip rows containing nans
         vertex_array=vertex_array[ ~np.isnan(vertex_array) ].reshape(number_vertices,3)
     else:
