@@ -149,6 +149,103 @@ def _get_plot_stat_map_params(stat_map_data, vmax, symmetric_cbar, kwargs,
         cbar_vmin, cbar_vmax = None, None
     return cbar_vmin, cbar_vmax, vmin, vmax
     
+
+def plot_surf_label(coords, faces, 
+                    labels=None,
+                    elev=0, azim=0,
+                    cpal='bright',
+                    threshold=None, 
+                    bg_map=None,
+                    bg_on_labels=False,
+                    alpha='auto',
+                    figsize=None,
+                    **kwargs):
+    
+    '''
+    - labels requires a tuple of label/s, each a list/array of node indices
+    - cpal takes either the name of a seaborn color palette or matplotlib color map, 
+      or a list of rgb values or color names from http://xkcd.com/color/rgb/
+    '''
+    
+    import numpy as np
+    import matplotlib.pyplot as plt
+    import matplotlib.tri as tri
+    from mpl_toolkits.mplot3d import Axes3D
+    import seaborn as sns
+    
+    # load mesh and derive axes limits
+    faces = np.array(faces, dtype=int)
+    limits = [coords.min(), coords.max()]
+
+    # set alpha if in auto mode
+    if alpha == 'auto':
+        if bg_map is None:
+            alpha = .5
+        else:
+            alpha = 1
+
+    # if cap is given as string, translate to seaborn color palette
+    if type(cpal) == str:
+        cpal = sns.color_palette(cpal, len(labels))
+    if type(cpal) == list:
+        if len(cpal) < len(labels):
+            raise ValueError('There are not enough colors in the color list.')
+        try:
+            cpal = sns.color_palette(cpal)
+        except:
+            cpal = sns.xkcd_palette(cpal)
+    
+    # initiate figure and 3d axes
+    if figsize is not None:
+        fig = plt.figure(figsize=figsize)
+    else:
+        fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d', xlim=limits, ylim=limits)
+    ax.view_init(elev=elev, azim=azim)
+    ax.set_axis_off()
+
+    # plot mesh without data
+    p3dcollec = ax.plot_trisurf(coords[:, 0], coords[:, 1], coords[:, 2],
+                                triangles=faces, linewidth=0.,
+                                antialiased=False,
+                                color='white')
+
+    if bg_map is not None or labels is not None:
+
+        face_colors = np.ones((faces.shape[0], 4))
+        face_colors[:, :3] = .5*face_colors[:, :3]
+
+        if bg_map is not None:
+            bg_data = bg_map
+            if bg_data.shape[0] != coords.shape[0]:
+                raise ValueError('The bg_map does not have the same number '
+                                 'of vertices as the mesh.')
+            bg_faces = np.mean(bg_data[faces], axis=1)
+            bg_faces = bg_faces - bg_faces.min()
+            bg_faces = bg_faces / bg_faces.max()    
+            face_colors = plt.cm.gray_r(bg_faces)
+
+        # modify alpha values of background
+        face_colors[:, 3] = alpha*face_colors[:, 3]
+
+        if labels is not None:
+            if bg_on_labels:
+                label_colors = np.ones((faces.shape[0], 4))
+                for n,label in enumerate(labels):
+                    for node in label:
+                        for face in np.where(np.in1d(faces.ravel(), [node]).reshape(faces.shape))[0]:
+                            label_colors[face,0:3] = cpal[n]
+                face_colors = label_colors * face_colors
+            else:
+                for n,label in enumerate(labels):
+                    for node in label:
+                        for face in np.where(np.in1d(faces.ravel(), [node]).reshape(faces.shape))[0]:
+                            face_colors[face,0:3] = cpal[n]
+            
+        p3dcollec.set_facecolors(face_colors)
+
+    return fig
+
     
 def crop_img(fig, margin=10):
     # takes fig, returns image
