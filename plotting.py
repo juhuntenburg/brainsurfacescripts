@@ -20,6 +20,7 @@ def plot_surf_stat_map(coords, faces, stat_map=None,
     import matplotlib.pyplot as plt
     import matplotlib.tri as tri
     from mpl_toolkits.mplot3d import Axes3D
+    import seaborn as sns
 
     # load mesh and derive axes limits
     faces = np.array(faces, dtype=int)
@@ -41,15 +42,16 @@ def plot_surf_stat_map(coords, faces, stat_map=None,
         fig = plt.figure(figsize=figsize)
     else:
         fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d', xlim=limits, ylim=limits)
-    ax.view_init(elev=elev, azim=azim)
-    ax.set_axis_off()
-
-    # plot mesh without data
-    p3dcollec = ax.plot_trisurf(coords[:, 0], coords[:, 1], coords[:, 2],
-                                triangles=faces, linewidth=0.,
-                                antialiased=False,
-                                color='white')
+    with sns.axes_style("white"):
+        ax = fig.add_subplot(111, projection='3d', xlim=limits, ylim=limits)
+        ax.view_init(elev=elev, azim=azim)
+        ax.set_axis_off()
+    
+        # plot mesh without data
+        p3dcollec = ax.plot_trisurf(coords[:, 0], coords[:, 1], coords[:, 2],
+                                    triangles=faces, linewidth=0.,
+                                    antialiased=False,
+                                    color='white')
 
     # If depth_map and/or stat_map are provided, map these onto the surface
     # set_facecolors function of Poly3DCollection is used as passing the
@@ -148,3 +150,30 @@ def _get_plot_stat_map_params(stat_map_data, vmax, symmetric_cbar, kwargs,
     else:
         cbar_vmin, cbar_vmax = None, None
     return cbar_vmin, cbar_vmax, vmin, vmax
+    
+    
+def crop_img(fig, margin=10):
+    # takes fig, returns image
+    import numpy as np
+    import matplotlib.pyplot as plt
+    import matplotlib.image as mpimg
+    import os
+    
+    fig.savefig('./tempimage', bbox_inches='tight', orientation='landscape')
+    plt.close(fig)
+    img = mpimg.imread('./tempimage.png')
+    os.remove('./tempimage.png')    
+    
+    kept = {'rows':[], 'cols':[]}
+    for row in range(img.shape[0]):
+        if False in np.ndarray.flatten(img[row,:,:] == np.array([ 1.,  1.,  1.,  1.])):
+            kept['rows'].append(row)
+    for col in range(img.shape[1]):
+        if False in np.ndarray.flatten(img[:,col,:] == np.array([ 1.,  1.,  1.,  1.])):
+            kept['cols'].append(col)
+    
+    if margin:
+        return img[min(kept['rows'])-margin:max(kept['rows'])+margin,
+                   min(kept['cols'])-margin:max(kept['cols'])+margin]
+    else:
+        return img[kept['rows']][:,kept['cols']]
