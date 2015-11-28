@@ -14,12 +14,14 @@ def plot_surf_stat_map(coords, faces, stat_map=None,
                        alpha='auto',
                        vmax=None, symmetric_cbar="auto",
                        figsize=None,
+                       labels=None, label_cpal=None,
                        **kwargs):
     
     import numpy as np
     import matplotlib.pyplot as plt
     import matplotlib.tri as tri
     from mpl_toolkits.mplot3d import Axes3D
+    import seaborn as sns
     
     # load mesh and derive axes limits
     faces = np.array(faces, dtype=int)
@@ -98,6 +100,36 @@ def plot_surf_stat_map(coords, faces, stat_map=None,
                 else:
                     face_colors = cmap(stat_map_faces)
 
+        if labels is not None:
+            '''
+            labels requires a tuple of label/s, each a list/array of node indices
+            ----------------------------------------------------------------------
+            color palette for labels
+            if label_cpal is None, outlines will be black
+            if it's a color palette name, a different color for each label will be generated
+            if it's a list of rgb or color names, these will be used
+            valid color names from http://xkcd.com/color/rgb/
+            '''
+            if label_cpal is not None:
+                if type(label_cpal) == str:
+                    cpal = sns.color_palette(label_cpal, len(labels))
+                if type(label_cpal) == list:
+                    if len(label_cpal) < len(labels):
+                        raise ValueError('There are not enough colors in the color list.')
+                    try:
+                        cpal = sns.color_palette(label_cpal)
+                    except:
+                        cpal = sns.xkcd_palette(label_cpal)
+        
+            for n_label, label in enumerate(labels):
+                for n_face, face in enumerate(faces):
+                    count = len(set(face).intersection(set(label)))
+                    if (count > 0) & (count < 3):
+                        if label_cpal is None:
+                            face_colors[n_face,0:3] = sns.xkcd_palette(["black"])[0]
+                        else:
+                            face_colors[n_face,0:3] = cpal[n_label]
+                            
         p3dcollec.set_facecolors(face_colors)
 
     return fig
