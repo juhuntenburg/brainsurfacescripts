@@ -260,19 +260,16 @@ def plot_surf_label(coords, faces,
         # modify alpha values of background
         face_colors[:, 3] = alpha*face_colors[:, 3]
 
+        # color the labels, either overriding or overlaying bg_map
         if labels is not None:
-            if bg_on_labels:
-                label_colors = np.ones((faces.shape[0], 4))
-                for n,label in enumerate(labels):
-                    for node in label:
-                        for face in np.where(np.in1d(faces.ravel(), [node]).reshape(faces.shape))[0]:
-                            label_colors[face,0:3] = cpal[n]
-                face_colors = label_colors * face_colors
-            else:
-                for n,label in enumerate(labels):
-                    for node in label:
-                        for face in np.where(np.in1d(faces.ravel(), [node]).reshape(faces.shape))[0]:
-                            face_colors[face,0:3] = cpal[n]
+            for n_label,label in enumerate(labels):
+                for n_face, face in enumerate(faces):
+                    count = len(set(face).intersection(set(label)))
+                    if count > 1:
+                        if bg_on_labels:
+                            face_colors[n_face,0:3] = cpal[n_label] * face_colors[n_face,0:3]
+                        else:
+                            face_colors[n_face,0:3] = cpal[n_label]
             
         p3dcollec.set_facecolors(face_colors)
 
