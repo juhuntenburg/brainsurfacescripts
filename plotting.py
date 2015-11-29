@@ -290,10 +290,10 @@ def crop_img(fig, margin=10):
     
     kept = {'rows':[], 'cols':[]}
     for row in range(img.shape[0]):
-        if len(set(np.ndarray.flatten(img[row,:,:]))) > 1:
+        if len(set(np.ndarray.flatten(img[row,:,:]))) > 3:
             kept['rows'].append(row)
     for col in range(img.shape[1]):
-        if len(set(np.ndarray.flatten(img[col,:,:]))) > 1:
+        if len(set(np.ndarray.flatten(img[:,col,:]))) > 3:
             kept['cols'].append(col)
     
     if margin:
