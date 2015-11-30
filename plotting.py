@@ -14,12 +14,14 @@ def plot_surf_stat_map(coords, faces, stat_map=None,
                        alpha='auto',
                        vmax=None, symmetric_cbar="auto",
                        figsize=None,
+                       labels=None, label_cpal=None,
                        **kwargs):
     
     import numpy as np
     import matplotlib.pyplot as plt
     import matplotlib.tri as tri
     from mpl_toolkits.mplot3d import Axes3D
+    import seaborn as sns
     
     # load mesh and derive axes limits
     faces = np.array(faces, dtype=int)
@@ -98,6 +100,36 @@ def plot_surf_stat_map(coords, faces, stat_map=None,
                 else:
                     face_colors = cmap(stat_map_faces)
 
+        if labels is not None:
+            '''
+            labels requires a tuple of label/s, each a list/array of node indices
+            ----------------------------------------------------------------------
+            color palette for labels
+            if label_cpal is None, outlines will be black
+            if it's a color palette name, a different color for each label will be generated
+            if it's a list of rgb or color names, these will be used
+            valid color names from http://xkcd.com/color/rgb/
+            '''
+            if label_cpal is not None:
+                if type(label_cpal) == str:
+                    cpal = sns.color_palette(label_cpal, len(labels))
+                if type(label_cpal) == list:
+                    if len(label_cpal) < len(labels):
+                        raise ValueError('There are not enough colors in the color list.')
+                    try:
+                        cpal = sns.color_palette(label_cpal)
+                    except:
+                        cpal = sns.xkcd_palette(label_cpal)
+        
+            for n_label, label in enumerate(labels):
+                for n_face, face in enumerate(faces):
+                    count = len(set(face).intersection(set(label)))
+                    if (count > 0) & (count < 3):
+                        if label_cpal is None:
+                            face_colors[n_face,0:3] = sns.xkcd_palette(["black"])[0]
+                        else:
+                            face_colors[n_face,0:3] = cpal[n_label]
+                            
         p3dcollec.set_facecolors(face_colors)
 
     return fig
@@ -149,6 +181,100 @@ def _get_plot_stat_map_params(stat_map_data, vmax, symmetric_cbar, kwargs,
         cbar_vmin, cbar_vmax = None, None
     return cbar_vmin, cbar_vmax, vmin, vmax
     
+
+def plot_surf_label(coords, faces, 
+                    labels=None,
+                    elev=0, azim=0,
+                    cpal='bright',
+                    threshold=None, 
+                    bg_map=None,
+                    bg_on_labels=False,
+                    alpha='auto',
+                    figsize=None,
+                    **kwargs):
+    
+    '''
+    - labels requires a tuple of label/s, each a list/array of node indices
+    - cpal takes either the name of a seaborn color palette or matplotlib color map, 
+      or a list of rgb values or color names from http://xkcd.com/color/rgb/
+    '''
+    
+    import numpy as np
+    import matplotlib.pyplot as plt
+    import matplotlib.tri as tri
+    from mpl_toolkits.mplot3d import Axes3D
+    import seaborn as sns
+    
+    # load mesh and derive axes limits
+    faces = np.array(faces, dtype=int)
+    limits = [coords.min(), coords.max()]
+
+    # set alpha if in auto mode
+    if alpha == 'auto':
+        if bg_map is None:
+            alpha = .5
+        else:
+            alpha = 1
+
+    # if cap is given as string, translate to seaborn color palette
+    if type(cpal) == str:
+        cpal = sns.color_palette(cpal, len(labels))
+    if type(cpal) == list:
+        if len(cpal) < len(labels):
+            raise ValueError('There are not enough colors in the color list.')
+        try:
+            cpal = sns.color_palette(cpal)
+        except:
+            cpal = sns.xkcd_palette(cpal)
+    
+    # initiate figure and 3d axes
+    if figsize is not None:
+        fig = plt.figure(figsize=figsize)
+    else:
+        fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d', xlim=limits, ylim=limits)
+    ax.view_init(elev=elev, azim=azim)
+    ax.set_axis_off()
+
+    # plot mesh without data
+    p3dcollec = ax.plot_trisurf(coords[:, 0], coords[:, 1], coords[:, 2],
+                                triangles=faces, linewidth=0.,
+                                antialiased=False,
+                                color='white')
+
+    if bg_map is not None or labels is not None:
+
+        face_colors = np.ones((faces.shape[0], 4))
+        face_colors[:, :3] = .5*face_colors[:, :3]
+
+        if bg_map is not None:
+            bg_data = bg_map
+            if bg_data.shape[0] != coords.shape[0]:
+                raise ValueError('The bg_map does not have the same number '
+                                 'of vertices as the mesh.')
+            bg_faces = np.mean(bg_data[faces], axis=1)
+            bg_faces = bg_faces - bg_faces.min()
+            bg_faces = bg_faces / bg_faces.max()    
+            face_colors = plt.cm.gray_r(bg_faces)
+
+        # modify alpha values of background
+        face_colors[:, 3] = alpha*face_colors[:, 3]
+
+        # color the labels, either overriding or overlaying bg_map
+        if labels is not None:
+            for n_label,label in enumerate(labels):
+                for n_face, face in enumerate(faces):
+                    count = len(set(face).intersection(set(label)))
+                    if count > 1:
+                        if bg_on_labels:
+                            face_colors[n_face,0:3] = cpal[n_label] * face_colors[n_face,0:3]
+                        else:
+                            face_colors[n_face,0:3] = cpal[n_label]
+            
+        p3dcollec.set_facecolors(face_colors)
+
+    return fig
+
     
 def crop_img(fig, margin=10):
     # takes fig, returns image
@@ -164,10 +290,10 @@ def crop_img(fig, margin=10):
     
     kept = {'rows':[], 'cols':[]}
     for row in range(img.shape[0]):
-        if len(set(np.ndarray.flatten(img[row,:,:]))) > 1:
+        if len(set(np.ndarray.flatten(img[row,:,:]))) > 3:
             kept['rows'].append(row)
     for col in range(img.shape[1]):
-        if len(set(np.ndarray.flatten(img[col,:,:]))) > 1:
+        if len(set(np.ndarray.flatten(img[:,col,:]))) > 3:
             kept['cols'].append(col)
     
     if margin:
