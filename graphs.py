@@ -72,21 +72,25 @@ def subcluster_graph(nodes, triangles, clustering):
     return subclust_arr
 
 def node_cluster_id(node, subclustering):
-    main_clust = int(np.where(subclust[node]!=0)[0][0])
-    sub_clust = int(subclust[node][main_clust])
-    clust_id = str(main_clust)+'_'+str(sub_clust)
-    return clust_id
+    import numpy as np
+    if np.where(subclustering[node]!=0)[0].shape[0] == 0:
+        return None
+    else:
+        main_clust = int(np.where(subclustering[node]!=0)[0][0])
+        sub_clust = int(subclustering[node][main_clust])
+        clust_id = str(main_clust)+'_'+str(sub_clust)
+        return clust_id
 
 
 def adjacent_subcluster(nodes, triangles, subclustering):
-    
+    import numpy as np
     G = graph_from_mesh(nodes, triangles)
     
     unique_pairs=[]
     for e in G.edges():
         ca = node_cluster_id(e[0], subclustering)
         cb = node_cluster_id(e[1], subclustering)
-        if ca != cb:
+        if (ca is not None and cb is not None and ca != cb):
             if (not (ca, cb) in unique_pairs and not (cb, ca) in unique_pairs):
                 unique_pairs.append((ca, cb))
     
