@@ -19,13 +19,14 @@ def graph_from_mesh(nodes, triangles, node_coords=False, edge_length=False):
     
     # caution! this adds a key 'coords' to the node
     # which will also be picked up by .neighbors methods
-    if node_coords:
-        for n in G.nodes_iter():
-            G[n]['coords']=nodes[n]
     
     if edge_length:
         for e in G.edges_iter():
             G[e[0]][e[1]]['length']=np.linalg.norm(nodes[e[0]]-nodes[e[1]])
+            
+    if node_coords:
+        for n in G.nodes_iter():
+            G[n]['coords']=nodes[n]
 
     return G
 
@@ -34,6 +35,7 @@ def subcluster_graph(nodes, triangles, clustering):
     
     '''
     Finds the non-connected components of each cluster
+    Currently works with networkx 1.6, not with 1.10
     '''
     
     import numpy as np
