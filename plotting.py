@@ -15,6 +15,7 @@ def plot_surf_stat_map(coords, faces, stat_map=None,
                        vmax=None, symmetric_cbar="auto",
                        figsize=None,
                        labels=None, label_cpal=None,
+                       mask=None, mask_lenient=None,
                        **kwargs):
     
     import numpy as np
@@ -52,6 +53,15 @@ def plot_surf_stat_map(coords, faces, stat_map=None,
                                 triangles=faces, linewidth=0.,
                                 antialiased=False,
                                 color='white')
+
+    # where mask is indices of nodes to include:
+    if mask:    
+        cmask = np.zeros(len(coords))
+        cmask[mask] = 1
+        cutoff = 2 # include triangles in cortex only if ALL nodes in mask
+        if mask_lenient: # include triangles in cortex if ANY are in mask
+            cutoff = 0
+        fmask = np.where(cmask[faces].sum(axis=1) > cutoff)[0]
 
     # If depth_map and/or stat_map are provided, map these onto the surface
     # set_facecolors function of Poly3DCollection is used as passing the
@@ -96,7 +106,10 @@ def plot_surf_stat_map(coords, faces, stat_map=None,
                 stat_map_faces = stat_map_faces - vmin
                 stat_map_faces = stat_map_faces / (vmax-vmin)
                 if bg_on_stat:
-                    face_colors = cmap(stat_map_faces) * face_colors
+                    if mask is not None:
+                        face_colors[fmask] = cmap(stat_map_faces)[fmask] * face_colors[fmask]
+                    else:
+                        face_colors = cmap(stat_map_faces) * face_colors
                 else:
                     face_colors = cmap(stat_map_faces)
 
