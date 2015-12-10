@@ -1,5 +1,5 @@
 '''
-Functions for plotting surfaces with pure python code. 
+Functions for plotting surfaces with pure python code.
 Reduced version of nilearn surface plotting:
 https://github.com/juhuntenburg/nilearn/tree/enh/surface_plotting
 
@@ -17,13 +17,13 @@ def plot_surf_stat_map(coords, faces, stat_map=None,
                        labels=None, label_cpal=None,
                        mask=None, mask_lenient=None,
                        **kwargs):
-    
+
     import numpy as np
     import matplotlib.pyplot as plt
     import matplotlib.tri as tri
     from mpl_toolkits.mplot3d import Axes3D
     import seaborn as sns
-    
+
     # load mesh and derive axes limits
     faces = np.array(faces, dtype=int)
     limits = [coords.min(), coords.max()]
@@ -55,7 +55,7 @@ def plot_surf_stat_map(coords, faces, stat_map=None,
                                 color='white')
 
     # where mask is indices of nodes to include:
-    if mask:    
+    if mask is not None:    
         cmask = np.zeros(len(coords))
         cmask[mask] = 1
         cutoff = 2 # include triangles in cortex only if ALL nodes in mask
@@ -111,7 +111,7 @@ def plot_surf_stat_map(coords, faces, stat_map=None,
                     else:
                         face_colors = cmap(stat_map_faces) * face_colors
                 else:
-                    if mask is not None:                        
+                    if mask is not None:
                         face_colors[fmask] = cmap(stat_map_faces)[fmask] * face_colors[fmask]
                     else:
                         face_colors = cmap(stat_map_faces)
@@ -136,7 +136,7 @@ def plot_surf_stat_map(coords, faces, stat_map=None,
                         cpal = sns.color_palette(label_cpal)
                     except:
                         cpal = sns.xkcd_palette(label_cpal)
-        
+
             for n_label, label in enumerate(labels):
                 for n_face, face in enumerate(faces):
                     count = len(set(face).intersection(set(label)))
@@ -145,7 +145,7 @@ def plot_surf_stat_map(coords, faces, stat_map=None,
                             face_colors[n_face,0:3] = sns.xkcd_palette(["black"])[0]
                         else:
                             face_colors[n_face,0:3] = cpal[n_label]
-                            
+
         p3dcollec.set_facecolors(face_colors)
 
     return fig
@@ -196,31 +196,31 @@ def _get_plot_stat_map_params(stat_map_data, vmax, symmetric_cbar, kwargs,
     else:
         cbar_vmin, cbar_vmax = None, None
     return cbar_vmin, cbar_vmax, vmin, vmax
-    
 
-def plot_surf_label(coords, faces, 
+
+def plot_surf_label(coords, faces,
                     labels=None,
                     elev=0, azim=0,
                     cpal='bright',
-                    threshold=None, 
+                    threshold=None,
                     bg_map=None,
                     bg_on_labels=False,
                     alpha='auto',
                     figsize=None,
                     **kwargs):
-    
+
     '''
     - labels requires a tuple of label/s, each a list/array of node indices
-    - cpal takes either the name of a seaborn color palette or matplotlib color map, 
+    - cpal takes either the name of a seaborn color palette or matplotlib color map,
       or a list of rgb values or color names from http://xkcd.com/color/rgb/
     '''
-    
+
     import numpy as np
     import matplotlib.pyplot as plt
     import matplotlib.tri as tri
     from mpl_toolkits.mplot3d import Axes3D
     import seaborn as sns
-    
+
     # load mesh and derive axes limits
     faces = np.array(faces, dtype=int)
     limits = [coords.min(), coords.max()]
@@ -242,7 +242,7 @@ def plot_surf_label(coords, faces,
             cpal = sns.color_palette(cpal)
         except:
             cpal = sns.xkcd_palette(cpal)
-    
+
     # initiate figure and 3d axes
     if figsize is not None:
         fig = plt.figure(figsize=figsize)
@@ -270,7 +270,7 @@ def plot_surf_label(coords, faces,
                                  'of vertices as the mesh.')
             bg_faces = np.mean(bg_data[faces], axis=1)
             bg_faces = bg_faces - bg_faces.min()
-            bg_faces = bg_faces / bg_faces.max()    
+            bg_faces = bg_faces / bg_faces.max()
             face_colors = plt.cm.gray_r(bg_faces)
 
         # modify alpha values of background
@@ -286,24 +286,24 @@ def plot_surf_label(coords, faces,
                             face_colors[n_face,0:3] = cpal[n_label] * face_colors[n_face,0:3]
                         else:
                             face_colors[n_face,0:3] = cpal[n_label]
-            
+
         p3dcollec.set_facecolors(face_colors)
 
     return fig
 
-    
+
 def crop_img(fig, margin=10):
     # takes fig, returns image
     import numpy as np
     import matplotlib.pyplot as plt
     import matplotlib.image as mpimg
     import os
-    
+
     fig.savefig('./tempimage', bbox_inches='tight', orientation='landscape')
     plt.close(fig)
     img = mpimg.imread('./tempimage.png')
-    os.remove('./tempimage.png')    
-    
+    os.remove('./tempimage.png')
+
     kept = {'rows':[], 'cols':[]}
     for row in range(img.shape[0]):
         if len(set(np.ndarray.flatten(img[row,:,:]))) > 3:
@@ -311,7 +311,7 @@ def crop_img(fig, margin=10):
     for col in range(img.shape[1]):
         if len(set(np.ndarray.flatten(img[:,col,:]))) > 3:
             kept['cols'].append(col)
-    
+
     if margin:
         return img[min(kept['rows'])-margin:max(kept['rows'])+margin,
                    min(kept['cols'])-margin:max(kept['cols'])+margin]
