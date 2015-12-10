@@ -111,7 +111,10 @@ def plot_surf_stat_map(coords, faces, stat_map=None,
                     else:
                         face_colors = cmap(stat_map_faces) * face_colors
                 else:
-                    face_colors = cmap(stat_map_faces)
+                    if mask is not None:                        
+                        face_colors[fmask] = cmap(stat_map_faces)[fmask] * face_colors[fmask]
+                    else:
+                        face_colors = cmap(stat_map_faces)
 
         if labels is not None:
             '''
