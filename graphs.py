@@ -22,7 +22,9 @@ def graph_from_mesh(nodes, triangles, node_coords=False, edge_length=False):
     
     if edge_length:
         for e in G.edges_iter():
-            G[e[0]][e[1]]['length']=np.linalg.norm(nodes[e[0]]-nodes[e[1]])
+            #G[e[0]][e[1]]['length']=np.linalg.norm(nodes[e[0]]-nodes[e[1]])
+            G[e[0]][e[1]]=np.linalg.norm(nodes[e[0]]-nodes[e[1]])
+            G[e[1]][e[0]]=np.linalg.norm(nodes[e[0]]-nodes[e[1]])
             
     if node_coords:
         for n in G.nodes_iter():
