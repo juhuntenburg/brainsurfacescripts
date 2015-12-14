@@ -1,5 +1,9 @@
 Python scripts for simple operations with brain surfaces.
 
-* conversion of meshes between ply and vtk format
-* evaluating volume sampling by mesh e.g. after mesh simplification
-* finding the median levelset surface
+* reading and writing vtk and ply surface format
+* plotting surfaces with matplotlib only
+* evaulating meshes as graphs with networkx (spatial cluster, shortest path, ...)
+* sampling volumetric data on a mesh
+* evaluating mesh simplification
+* finding a median levelset surface
+...
