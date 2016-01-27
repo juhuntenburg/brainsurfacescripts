@@ -10,7 +10,8 @@ def add_neighbours(node, length, graph, labels, tree):
     unlabelled = neighbours[np.where(labels[neighbours][:,1]==-1)[0]]
     # insert source neighbour pair with edge length to tree
     for u in unlabelled:
-        new_length = length + graph[node][u]['length']
+        #new_length = length + graph[node][u]['length']
+        new_length = length + graph[node][u]
         tree.insert(new_length,(node, u))
     
     return tree
