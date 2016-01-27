@@ -12,6 +12,7 @@ def plot_surf_stat_map(coords, faces, stat_map=None,
                        threshold=None, bg_map=None,
                        bg_on_stat=False,
                        alpha='auto',
+                       darkness=1,
                        vmax=None, symmetric_cbar="auto",
                        figsize=None,
                        labels=None, label_cpal=None,
@@ -79,6 +80,7 @@ def plot_surf_stat_map(coords, faces, stat_map=None,
             bg_faces = np.mean(bg_data[faces], axis=1)
             bg_faces = bg_faces - bg_faces.min()
             bg_faces = bg_faces / bg_faces.max()
+            bg_faces *= darkness
             face_colors = plt.cm.gray_r(bg_faces)
 
         # modify alpha values of background
@@ -206,6 +208,7 @@ def plot_surf_label(coords, faces,
                     bg_map=None,
                     bg_on_labels=False,
                     alpha='auto',
+                    darkness=1, 
                     figsize=None,
                     **kwargs):
 
@@ -271,6 +274,7 @@ def plot_surf_label(coords, faces,
             bg_faces = np.mean(bg_data[faces], axis=1)
             bg_faces = bg_faces - bg_faces.min()
             bg_faces = bg_faces / bg_faces.max()
+            bg_faces *= darkness
             face_colors = plt.cm.gray_r(bg_faces)
 
         # modify alpha values of background
