@@ -107,13 +107,19 @@ def competetive_fast_marching(vertices, graph, seeds):
                 # assign label of source to target
                 labels[target][1] = labels[source][1]
         
-        # test if labelling is complete
-        if any(labels[:,1]==-1):
-            # if not, add neighbours of target to tree
-            add_neighbours(target, length, graph, labels, tree)
-        else:
-            break
+            # test if labelling is complete
+            if any(labels[:,1]==-1):
+                # if not, add neighbours of target to tree
+                add_neighbours(target, length, graph, labels, tree)
+            else:
+                break
         
+        # if the target already has a label the item is just popped out of the 
+        # tree and nothing else happens
+        else:
+            pass
+        
+        # for monitoring the progress
         if np.mod(printcount, 100) == 0.0:
             print 'tree '+str(tree.count)
             print 'labels '+str(np.where(labels[:,1]==-1)[0].shape[0])
