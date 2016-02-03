@@ -1,3 +1,41 @@
+import numpy as np
+
+def calculate_normals(vertices, faces):
+    '''
+    Calculate the vertex normals of a given mesh, as average of face normals
+    weighted by face area. Normals are normalized to length 1. adapted from:
+    https://sites.google.com/site/dlampetest/python/calculating-normals-of-a
+    -triangle-mesh-using-numpy
+    '''
+    
+    triangles = vertices[faces]
+    face_normals = np.cross(triangles[::, 1 ] - triangles[::, 0]  , 
+                            triangles[::, 2 ] - triangles[::, 0])
+    # face_normals /= np.linalg.norm(face_normals, axis=1)[:,np.newaxis]
+    # weighting by surface area of the triangle =  half-length of the normal
+    
+    face_normals /= 2  
+    vertex_normals = np.zeros(vertices.shape, dtype=vertices.dtype)
+    vertex_normals[faces[:, 0]] += face_normals
+    vertex_normals[faces[:, 1]] += face_normals
+    vertex_normals[faces[:, 2]] += face_normals
+    vertex_normals /= np.linalg.norm(vertex_normals, axis=1)[:, np.newaxis]
+    
+    return vertex_normals
+
+
+def compare_normals(normals_a, normals_b):
+    '''
+    Calculate the angles between two sets of normals
+    '''
+    diff_rad = np.zeros((normals_a.shape[0],))
+    for i in range(normals_a.shape[0]):
+        diff_rad[i] = np.arccos(np.dot(normals_a[i], normals_b[i]))
+    
+    diff_deg = diff_rad  * (180/np.pi)
+    return diff_rad, diff_deg
+
+
 def add_neighbours(node, length, graph, labels, tree):
     '''
     Find unlabelled neighbours of a node in the graph and add them to 
@@ -7,60 +45,82 @@ def add_neighbours(node, length, graph, labels, tree):
     # find direct neighbours of the node
     neighbours = np.array(graph.neighbors(node))
     # check that they don't already have a label
-    unlabelled = neighbours[np.where(labels[neighbours][:,1]==-1)[0]]
+    unlabelled = neighbours[np.where(labels[neighbours][:, 1] == -1)[0]]
     # insert source neighbour pair with edge length to tree
     for u in unlabelled:
-        #new_length = length + graph[node][u]['length']
+        # new_length = length + graph[node][u]['length']
         new_length = length + graph[node][u]
-        tree.insert(new_length,(node, u))
+        tree.insert(new_length, (node, u))
     
     return tree
 
-
-def find_voronoi_seeds(simple_vertices, complex_vertices):
+def find_voronoi_seeds(simple_vertices, simple_faces, complex_vertices, complex_faces, cutoff_euclid=2.0, cutoff_rad=(np.pi/2)):
     '''
-    Finds those points on the complex mesh that correspoind best to the
-    simple mesh while forcing a one-to-one mapping
+    Finds those points on the complex mesh that correspond best to the
+    simple mesh (taking into accound euclidian distance and direction of normals)
+    while forcing a one-to-one mapping
     '''
-    import numpy as np
+    from bintrees import FastAVLTree
     import scipy.spatial as spatial
-    # make array for writing in final voronoi seed indices
+
+    neighbours = 500
+
+    # calculate normals for simple and complex vertices
+    simple_normals = calculate_normals(simple_vertices, simple_faces)
+    complex_normals = calculate_normals(complex_vertices, complex_faces)
+
+    print 'producing nearest neighbours'
+    # find nearest neighbours of simple vertices on complex mesh using kdtree
+    inaccuracy, mapping  = spatial.KDTree(complex_vertices).query(simple_vertices, k=neighbours)
+
+    # create tidy long-format lists
+    simple_idxs = np.asarray([neighbours*[simple_idx] for simple_idx in range(simple_vertices.shape[0])]).flatten()
+    candidate_idxs = mapping.flatten()
+    diff_euclid = inaccuracy.flatten()
+
+    # for each vertex pair calculate the angle between their normals
+    diff_normals, _ = compare_normals(simple_normals[simple_idxs], complex_normals[candidate_idxs])
+
+    # remove those pairs that have an angle > 2/pi and/or distance > 2 mm
+    mask = np.unique(np.concatenate((np.where(diff_euclid>cutoff_euclid)[0], np.where(diff_normals>cutoff_rad)[0])))
+    diff_normals = np.delete(diff_normals, mask)
+    diff_euclid = np.delete(diff_euclid, mask)
+    simple_idxs = np.delete(simple_idxs, mask)
+    candidate_idxs = np.delete(candidate_idxs, mask)
+
+    # calculate scores for each vertex pair
+    scores = (diff_normals-np.mean(diff_normals)) + (diff_euclid-np.mean(diff_euclid))
+
+    print 'producing tree'
+    # make a binary search tree from the scores and vertex pairs, 
+    # organisation is key: score, values: tuple(simple_vertex, candiate_complex_vertex)
+    tree = FastAVLTree(zip(scores, zip(simple_idxs, candidate_idxs)))
+
     voronoi_seed_idx = np.zeros((simple_vertices.shape[0],), dtype='int64')-1
     missing = np.where(voronoi_seed_idx==-1)[0].shape[0]
-    mapping_single = np.zeros_like(voronoi_seed_idx)
 
-    neighbours = 0
-    col = 0
+    print 'looping over tree'
+    while missing > 0:
 
-    while missing != 0:
+        min_item =  tree.pop_min()
+        simple_idx = min_item[1][0]
+        candidate_idx = min_item[1][1]
 
-        neighbours += 100
-        # find nearest neighbours
-        inaccuracy, mapping  = spatial.KDTree(complex_vertices).query(simple_vertices, k=neighbours)
-        # go through columns of nearest neighbours until unique mapping is
-        # achieved, if not before end of neighbours, extend number of neighbours
-        while col < neighbours:
-            # find all missing voronoi seed indices
-            missing_idx = np.where(voronoi_seed_idx==-1)[0]
-            missing = missing_idx.shape[0]
-            if missing == 0:
-                break
+        if (voronoi_seed_idx[simple_idx] == -1):
+            if candidate_idx not in voronoi_seed_idx:
+                voronoi_seed_idx[simple_idx] = candidate_idx
             else:
-                # for missing entries fill in next neighbour
-                mapping_single[missing_idx]=np.copy(mapping[missing_idx,col])
-                # find unique values in mapping_single
-                unique, double_idx = np.unique(mapping_single, return_inverse = True)
-                # empty voronoi seed index
-                voronoi_seed_idx = np.zeros((simple_vertices.shape[0],), dtype='int64')-1
-                # fill voronoi seed idx with unique values
-                for u in range(unique.shape[0]):
-                    # find the indices of this value in mapping
-                    entries = np.where(double_idx==u)[0]
-                    # set the first entry to the value
-                    voronoi_seed_idx[entries[0]] = unique[u]
-                # go to next column
-                col += 1 
-                
+                pass
+        else:
+            pass
+
+        missing = np.where(voronoi_seed_idx==-1)[0].shape[0]
+        print missing
+
+        if tree.count == 0:
+            print "tree is empty"
+            break
+
     return voronoi_seed_idx, inaccuracy
 
 
@@ -76,8 +136,8 @@ def competetive_fast_marching(vertices, graph, seeds):
     # first column are the vertex indices of the complex mesh
     # second column are the labels from the simple mesh
     # (-1 for all but the corresponding points for now)
-    labels = np.zeros((vertices.shape[0],2), dtype='int64')-1
-    labels[:,0] = range(vertices.shape[0])
+    labels = np.zeros((vertices.shape[0], 2), dtype='int64') - 1
+    labels[:, 0] = range(vertices.shape[0])
     for i in range(seeds.shape[0]):
         labels[seeds[i]][1] = i
     # initiate AVLTree for binary search
@@ -93,13 +153,13 @@ def competetive_fast_marching(vertices, graph, seeds):
         
         printcount += 1
         
-        #pdb.set_trace()
+        # pdb.set_trace()
         # pop the item with minimum edge length
         min_item = tree.pop_min()
         length = min_item[0]
         source = min_item[1][0]
         target = min_item[1][1]
-        #if target no label yet (but source does!), assign label of source
+        # if target no label yet (but source does!), assign label of source
         if labels[target][1] == -1:
             if labels[source][1] == -1:
                 sys.exit('Source has no label, something went wrong!')
@@ -108,7 +168,7 @@ def competetive_fast_marching(vertices, graph, seeds):
                 labels[target][1] = labels[source][1]
         
             # test if labelling is complete
-            if any(labels[:,1]==-1):
+            if any(labels[:, 1] == -1):
                 # if not, add neighbours of target to tree
                 add_neighbours(target, length, graph, labels, tree)
             else:
@@ -121,8 +181,8 @@ def competetive_fast_marching(vertices, graph, seeds):
         
         # for monitoring the progress
         if np.mod(printcount, 100) == 0.0:
-            print 'tree '+str(tree.count)
-            print 'labels '+str(np.where(labels[:,1]==-1)[0].shape[0])
+            print 'tree ' + str(tree.count)
+            print 'labels ' + str(np.where(labels[:, 1] == -1)[0].shape[0])
     
     return labels
 
@@ -135,10 +195,10 @@ def sample_simple(highres_data, labels):
     label (typical simple mesh vertices).
     '''
     # create new empty lowres data array
-    lowres_data = np.empty((int(labels.max()+1), highres_data.shape[1]))
+    lowres_data = np.empty((int(labels.max() + 1), highres_data.shape[1]))
     # find all vertices on highres and mean
-    for l in range(int(labels.max()+1)):
-        patch = np.where(labels==l)[0]
+    for l in range(int(labels.max() + 1)):
+        patch = np.where(labels == l)[0]
         patch_data = highres_data[patch]
         patch_mean = np.mean(patch_data, axis=0)
         lowres_data[l] = patch_mean
@@ -158,9 +218,9 @@ def sample_volume(nii_file, vertices):
     data = img.get_data()
     
     # for each vertex in the highres mesh find voxel it maps to
-    dim = -(np.round([affine[0,0], affine[1,1], affine[2,2]], 1))
-    idx = np.asarray(np.round(vertices/dim), dtype='int64')
-    data_mesh = data[idx[:,0],idx[:,1],idx[:,2]]
+    dim = -(np.round([affine[0, 0], affine[1, 1], affine[2, 2]], 1))
+    idx = np.asarray(np.round(vertices / dim), dtype='int64')
+    data_mesh = data[idx[:, 0], idx[:, 1], idx[:, 2]]
     
     return data_mesh
     
