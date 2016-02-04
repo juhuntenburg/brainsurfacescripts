@@ -54,7 +54,9 @@ def add_neighbours(node, length, graph, labels, tree):
     
     return tree
 
-def find_voronoi_seeds(simple_vertices, simple_faces, complex_vertices, complex_faces, cutoff_euclid=2.0, cutoff_rad=(np.pi/2)):
+def find_voronoi_seeds(simple_vertices, simple_faces, 
+                       complex_vertices, complex_faces, 
+                       cutoff_angle=(np.pi/2)):
     '''
     Finds those points on the complex mesh that correspond best to the
     simple mesh (taking into accound euclidian distance and direction of normals)
@@ -62,64 +64,74 @@ def find_voronoi_seeds(simple_vertices, simple_faces, complex_vertices, complex_
     '''
     from bintrees import FastAVLTree
     import scipy.spatial as spatial
-
-    neighbours = 500
-
+    
+    
     # calculate normals for simple and complex vertices
     simple_normals = calculate_normals(simple_vertices, simple_faces)
     complex_normals = calculate_normals(complex_vertices, complex_faces)
-
-    print 'producing nearest neighbours'
-    # find nearest neighbours of simple vertices on complex mesh using kdtree
-    inaccuracy, mapping  = spatial.KDTree(complex_vertices).query(simple_vertices, k=neighbours)
-
-    # create tidy long-format lists
-    simple_idxs = np.asarray([neighbours*[simple_idx] for simple_idx in range(simple_vertices.shape[0])]).flatten()
-    candidate_idxs = mapping.flatten()
-    diff_euclid = inaccuracy.flatten()
-
-    # for each vertex pair calculate the angle between their normals
-    diff_normals, _ = compare_normals(simple_normals[simple_idxs], complex_normals[candidate_idxs])
-
-    # remove those pairs that have an angle > 2/pi and/or distance > 2 mm
-    mask = np.unique(np.concatenate((np.where(diff_euclid>cutoff_euclid)[0], np.where(diff_normals>cutoff_rad)[0])))
-    diff_normals = np.delete(diff_normals, mask)
-    diff_euclid = np.delete(diff_euclid, mask)
-    simple_idxs = np.delete(simple_idxs, mask)
-    candidate_idxs = np.delete(candidate_idxs, mask)
-
-    # calculate scores for each vertex pair
-    scores = (diff_normals-np.mean(diff_normals)) + (diff_euclid-np.mean(diff_euclid))
-
-    print 'producing tree'
-    # make a binary search tree from the scores and vertex pairs, 
-    # organisation is key: score, values: tuple(simple_vertex, candiate_complex_vertex)
-    tree = FastAVLTree(zip(scores, zip(simple_idxs, candidate_idxs)))
-
+    
+    # prepare array to store seeds
     voronoi_seed_idx = np.zeros((simple_vertices.shape[0],), dtype='int64')-1
     missing = np.where(voronoi_seed_idx==-1)[0].shape[0]
-
-    print 'looping over tree'
+    
+    # initialize with all vertices and small number of neighbours
+    remaining_idxs = range(simple_vertices.shape[0])
+    neighbours = 100
+    
     while missing > 0:
-
-        min_item =  tree.pop_min()
-        simple_idx = min_item[1][0]
-        candidate_idx = min_item[1][1]
-
-        if (voronoi_seed_idx[simple_idx] == -1):
-            if candidate_idx not in voronoi_seed_idx:
-                voronoi_seed_idx[simple_idx] = candidate_idx
+    
+        print 'producing nearest neighbours', neighbours
+        # find nearest neighbours of simple vertices on complex mesh using kdtree
+        inaccuracy, mapping  = spatial.KDTree(complex_vertices).query(simple_vertices[remaining_idxs], k=neighbours)
+        
+        # create tidy long-format lists
+        simple_idxs = np.asarray([neighbours*[simple_idx] for simple_idx in remaining_idxs]).flatten()
+        candidate_idxs = mapping.flatten()
+        diff_euclid = inaccuracy.flatten()
+        
+        # for each vertex pair calculate the angle between their normals
+        diff_normals, _ = compare_normals(simple_normals[simple_idxs], complex_normals[candidate_idxs])
+        print 'candidates', diff_normals.shape[0]
+        # remove those pairs that have an angle / distance above cutoff
+        #mask = np.unique(np.concatenate((np.where(diff_euclid>cutoff_euclid)[0], np.where(diff_normals>cutoff_rad)[0])))
+        mask = np.unique(np.where(diff_normals>cutoff_rad)[0])
+        diff_normals = np.delete(diff_normals, mask)
+        diff_euclid = np.delete(diff_euclid, mask)
+        simple_idxs = np.delete(simple_idxs, mask)
+        candidate_idxs = np.delete(candidate_idxs, mask)
+        
+        print 'remaining candidates', diff_normals.shape[0]
+        # calculate scores for each vertex pair
+        scores = (diff_normals-np.mean(diff_normals)) + (diff_euclid-np.mean(diff_euclid))
+        
+        print 'producing tree'
+        # make a binary search tree from the scores and vertex pairs, 
+        # organisation is key: score, values: tuple(simple_vertex, candiate_complex_vertex)
+        tree = FastAVLTree(zip(scores, zip(simple_idxs, candidate_idxs)))
+        
+        while tree.count > 0:
+        
+            min_item =  tree.pop_min()
+            simple_idx = min_item[1][0]
+            candidate_idx = min_item[1][1]
+        
+            if (voronoi_seed_idx[simple_idx] == -1):
+                if candidate_idx not in voronoi_seed_idx:
+                    voronoi_seed_idx[simple_idx] = candidate_idx
+                else:
+                    pass
             else:
                 pass
-        else:
-            pass
-
-        missing = np.where(voronoi_seed_idx==-1)[0].shape[0]
-        print missing
-
-        if tree.count == 0:
-            print "tree is empty"
-            break
+        
+            missing = np.where(voronoi_seed_idx==-1)[0].shape[0]
+            if missing == 0:
+                break
+        
+        # if the tree is empty, but there are still seeds missing, increase the number of nearest neighbours
+        # and repeat procedure, but only for those simple vertices that have not been matched yet
+        print 'missing ,', missing
+        remaining_idxs = np.where(voronoi_seed_idx==-1)[0]
+        neighbours *= 5
 
     return voronoi_seed_idx, inaccuracy
 
