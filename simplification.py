@@ -116,6 +116,7 @@ def find_voronoi_seeds(simple_vertices, simple_faces,
 
         # for each vertex pair calculate the angle between their normals
         diff_normals, _ = compare_normals(simple_normals[simple_idxs], complex_normals[candidate_idxs])
+        #diff_normals = np.reshape(diff_normals, mapping.shape)
         log(log_file, 'candidates %i'%(diff_normals.shape[0]))
         # remove those pairs that have an angle / distance above cutoff
         #mask = np.unique(np.concatenate((np.where(diff_euclid>cutoff_euclid)[0], np.where(diff_normals>cutoff_rad)[0])))
