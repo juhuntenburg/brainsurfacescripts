@@ -7,21 +7,31 @@ def calculate_normals(vertices, faces):
     it is part of
     '''
     
-    triangles = vertices[faces]
-    face_normals = np.cross( triangles[::,1 ] - triangles[::,0]  , triangles[::,2 ] - triangles[::,0] )
-    face_normals /= 2 # weighting by surface area of the triangle, which is half the length of the normal
+    # normalize normals
+    normals_a /= np.linalg.norm(normals_a, axis=1)[:,np.newaxis]
+    normals_b /= np.linalg.norm(normals_b, axis=1)[:,np.newaxis]
     
-    vertex_normals = np.zeros(vertices.shape, dtype=vertices.dtype)
-    vertex_count = np.zeros(vertices.shape[0])
+    if np.any(np.isnan(normals_a)):
+        raise ValueError('NaN in first set of normals')
+    elif np.any(np.isnan(normals_b)):
+        raise ValueError('NaN in second set of normals')
+    else:
+        pass
     
-    for face in range(faces.shape[0]):
-        vertex_normals[faces[face]] += face_normals[face]
-        vertex_count[faces[face]] += 1
-   
-    # divide by actual number of faces
-    vertex_normals /= vertex_count[:, np.newaxis]
+    # calculate angle between each pair of normals in radians
+    diff_dot = np.zeros((normals_a.shape[0],))
+    diff_rad = np.zeros((normals_a.shape[0],))
+    for i in range(normals_a.shape[0]):
+        diff_dot[i] = np.dot(normals_a[i], normals_b[i])
+    # if the dot product ends up being a very small float point bigger than 1, np.arccos returns NaN
+    # therefore set those cases to 1
+    diff_dot[np.where(diff_dot>1)] = 1.
+    diff_rad = np.arccos(diff_dot)
     
-    return vertex_normals
+    # transform to degree angle
+    diff_deg = diff_rad  * (180/np.pi)
+    
+    return diff_rad, diff_deg
 
 
 def compare_normals(normals_a, normals_b):
