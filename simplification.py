@@ -6,21 +6,21 @@ def calculate_normals(vertices, faces):
     as the weighted average of the normals of all faces
     it is part of
     '''
-
+    
     triangles = vertices[faces]
     face_normals = np.cross( triangles[::,1 ] - triangles[::,0]  , triangles[::,2 ] - triangles[::,0] )
     face_normals /= 2 # weighting by surface area of the triangle, which is half the length of the normal
-
+    
     vertex_normals = np.zeros(vertices.shape, dtype=vertices.dtype)
     vertex_count = np.zeros(vertices.shape[0])
-
+    
     for face in range(faces.shape[0]):
         vertex_normals[faces[face]] += face_normals[face]
-        vertex_normals[faces[face]] += 1
-
-    # here divide by actual number of faces, then normalize in the compare function
+        vertex_count[faces[face]] += 1
+   
+    # divide by actual number of faces
     vertex_normals /= vertex_count[:, np.newaxis]
-
+    
     return vertex_normals
 
 
