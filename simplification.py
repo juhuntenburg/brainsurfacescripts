@@ -7,6 +7,29 @@ def calculate_normals(vertices, faces):
     it is part of
     '''
     
+    triangles = vertices[faces]
+    face_normals = np.cross( triangles[::,1 ] - triangles[::,0]  , triangles[::,2 ] - triangles[::,0] )
+    face_normals /= 2 # weighting by surface area of the triangle, which is half the length of the normal
+    
+    vertex_normals = np.zeros(vertices.shape, dtype=vertices.dtype)
+    vertex_count = np.zeros(vertices.shape[0])
+    
+    for face in range(faces.shape[0]):
+        vertex_normals[faces[face]] += face_normals[face]
+        vertex_count[faces[face]] += 1
+   
+    # divide by actual number of faces
+    vertex_normals /= vertex_count[:, np.newaxis]
+    
+    return vertex_normals
+
+
+def compare_normals(normals_a, normals_b):
+    '''
+    Calculate the angles between two sets of normals.
+    Raises ValueError if any of the normals has length of 0
+    '''
+
     # normalize normals
     normals_a /= np.linalg.norm(normals_a, axis=1)[:,np.newaxis]
     normals_b /= np.linalg.norm(normals_b, axis=1)[:,np.newaxis]
@@ -31,34 +54,6 @@ def calculate_normals(vertices, faces):
     # transform to degree angle
     diff_deg = diff_rad  * (180/np.pi)
     
-    return diff_rad, diff_deg
-
-
-def compare_normals(normals_a, normals_b):
-    '''
-    Calculate the angles between two sets of normals.
-    Raises ValueError if any of the normals has length of 0
-    '''
-
-    # normalize normals
-    normals_a /= np.linalg.norm(normals_a, axis=1)[:,np.newaxis]
-    normals_b /= np.linalg.norm(normals_b, axis=1)[:,np.newaxis]
-
-    if np.any(np.isnan(normals_a)):
-        raise ValueError('NaN in first set of normals')
-    elif np.any(np.isnan(normals_b)):
-        raise ValueError('NaN in second set of normals')
-    else:
-        pass
-
-    # calculate angle between each pair of normals in radians
-    diff_rad = np.zeros((normals_a.shape[0],))
-    for i in range(normals_a.shape[0]):
-        diff_rad[i] = np.arccos(np.dot(normals_a[i], normals_b[i]))
-
-    # transform to degree angle
-    diff_deg = diff_rad  * (180/np.pi)
-
     return diff_rad, diff_deg
 
 
