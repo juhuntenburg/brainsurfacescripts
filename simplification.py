@@ -54,8 +54,11 @@ def add_neighbours(node, length, graph, labels, tree):
     
     return tree
 
+
+
 def find_voronoi_seeds(simple_vertices, simple_faces, 
                        complex_vertices, complex_faces, 
+                       log_file,
                        cutoff_angle=(np.pi/2)):
     '''
     Finds those points on the complex mesh that correspond best to the
@@ -64,6 +67,7 @@ def find_voronoi_seeds(simple_vertices, simple_faces,
     '''
     from bintrees import FastAVLTree
     import scipy.spatial as spatial
+    from utils import log
     
     
     # calculate normals for simple and complex vertices
@@ -80,7 +84,7 @@ def find_voronoi_seeds(simple_vertices, simple_faces,
     
     while missing > 0:
     
-        print 'producing nearest neighbours', neighbours
+        log(log_file, 'producing nearest neighbours k=%i'%(neighbours))
         # find nearest neighbours of simple vertices on complex mesh using kdtree
         inaccuracy, mapping  = spatial.KDTree(complex_vertices).query(simple_vertices[remaining_idxs], k=neighbours)
         
@@ -91,7 +95,7 @@ def find_voronoi_seeds(simple_vertices, simple_faces,
         
         # for each vertex pair calculate the angle between their normals
         diff_normals, _ = compare_normals(simple_normals[simple_idxs], complex_normals[candidate_idxs])
-        print 'candidates', diff_normals.shape[0]
+        log(log_file, 'candidates %i'%(diff_normals.shape[0]))
         # remove those pairs that have an angle / distance above cutoff
         #mask = np.unique(np.concatenate((np.where(diff_euclid>cutoff_euclid)[0], np.where(diff_normals>cutoff_rad)[0])))
         mask = np.unique(np.where(diff_normals>cutoff_angle)[0])
@@ -100,11 +104,11 @@ def find_voronoi_seeds(simple_vertices, simple_faces,
         simple_idxs = np.delete(simple_idxs, mask)
         candidate_idxs = np.delete(candidate_idxs, mask)
         
-        print 'remaining candidates', diff_normals.shape[0]
+        log(log_file, 'remaining candidates %i'%(diff_normals.shape[0]))
         # calculate scores for each vertex pair
         scores = (diff_normals-np.mean(diff_normals)) + (diff_euclid-np.mean(diff_euclid))
         
-        print 'producing tree'
+        log(log_file, 'producing tree')
         # make a binary search tree from the scores and vertex pairs, 
         # organisation is key: score, values: tuple(simple_vertex, candiate_complex_vertex)
         tree = FastAVLTree(zip(scores, zip(simple_idxs, candidate_idxs)))
@@ -129,11 +133,11 @@ def find_voronoi_seeds(simple_vertices, simple_faces,
         
         # if the tree is empty, but there are still seeds missing, increase the number of nearest neighbours
         # and repeat procedure, but only for those simple vertices that have not been matched yet
-        print 'missing ,', missing
+        log(log_file, 'missing %i'%(missing))
         remaining_idxs = np.where(voronoi_seed_idx==-1)[0]
         neighbours *= 5
 
-    return voronoi_seed_idx, inaccuracy
+    return voronoi_seed_idx, inaccuracy, log_file
 
 
 def competetive_fast_marching(vertices, graph, seeds):
