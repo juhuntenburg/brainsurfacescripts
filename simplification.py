@@ -78,9 +78,8 @@ def add_neighbours(node, length, graph, labels, tree):
 
 
 def find_voronoi_seeds(simple_vertices, simple_faces,
-                       complex_vertices, complex_faces,
-                       log_file,
-                       cutoff_angle=(np.pi/2)):
+                        complex_vertices, complex_faces,
+                        log_file, cutoff_angle=(np.pi/2)):
     '''
     Finds those points on the complex mesh that correspond best to the
     simple mesh (taking into accound euclidian distance and direction of normals)
@@ -89,76 +88,54 @@ def find_voronoi_seeds(simple_vertices, simple_faces,
     from bintrees import FastAVLTree
     import scipy.spatial as spatial
     from utils import log
-
-
+    
     # calculate normals for simple and complex vertices
     simple_normals = calculate_normals(simple_vertices, simple_faces)
     complex_normals = calculate_normals(complex_vertices, complex_faces)
-
+    
     # prepare array to store seeds
-    voronoi_seed_idx = np.zeros((simple_vertices.shape[0],), dtype='int64')-1
-    missing = np.where(voronoi_seed_idx==-1)[0].shape[0]
-
+    voronoi_seed_idx = np.zeros((simple_vertices.shape[0],), dtype='int64') -1
+    
     # initialize with all vertices and small number of neighbours
     remaining_idxs = range(simple_vertices.shape[0])
     neighbours = 100
-
-    while missing > 0:
-
+    
+    while np.any(voronoi_seed_idx==-1):
+        
         log(log_file, 'producing nearest neighbours k=%i'%(neighbours))
-        # find nearest neighbours of simple vertices on complex mesh using kdtree
         inaccuracy, mapping  = spatial.KDTree(complex_vertices).query(simple_vertices[remaining_idxs], k=neighbours)
-
+        
         # create tidy long-format lists
         simple_idxs = np.asarray([neighbours*[simple_idx] for simple_idx in remaining_idxs]).flatten()
         candidate_idxs = mapping.flatten()
-        diff_euclid = inaccuracy.flatten()
-
+    
         # for each vertex pair calculate the angle between their normals
         diff_normals, _ = compare_normals(simple_normals[simple_idxs], complex_normals[candidate_idxs])
-        #diff_normals = np.reshape(diff_normals, mapping.shape)
-        log(log_file, 'candidates %i'%(diff_normals.shape[0]))
-        # remove those pairs that have an angle / distance above cutoff
-        #mask = np.unique(np.concatenate((np.where(diff_euclid>cutoff_euclid)[0], np.where(diff_normals>cutoff_rad)[0])))
-        mask = np.unique(np.where(diff_normals>cutoff_angle)[0])
-        diff_normals = np.delete(diff_normals, mask)
-        diff_euclid = np.delete(diff_euclid, mask)
-        simple_idxs = np.delete(simple_idxs, mask)
-        candidate_idxs = np.delete(candidate_idxs, mask)
-
-        log(log_file, 'remaining candidates %i'%(diff_normals.shape[0]))
-        # calculate scores for each vertex pair
-        scores = (diff_normals-np.mean(diff_normals)) + (diff_euclid-np.mean(diff_euclid))
-
-        log(log_file, 'producing tree')
-        # make a binary search tree from the scores and vertex pairs,
-        # organisation is key: score, values: tuple(simple_vertex, candiate_complex_vertex)
-        tree = FastAVLTree(zip(scores, zip(simple_idxs, candidate_idxs)))
-
-        while tree.count > 0:
-
-            min_item =  tree.pop_min()
-            simple_idx = min_item[1][0]
-            candidate_idx = min_item[1][1]
-
-            if (voronoi_seed_idx[simple_idx] == -1):
-                if candidate_idx not in voronoi_seed_idx:
-                    voronoi_seed_idx[simple_idx] = candidate_idx
-                else:
-                    pass
-            else:
+        diff_normals = diff_normals.reshape(mapping.shape)
+        diff_euclid = inaccuracy
+    
+        # set values with angele > cutoff to nan so they can easily be ignored subsequently
+        mask = np.where(diff_normals>cutoff_angle)
+        diff_normals[mask] = np.nan
+        diff_euclid[mask] = np.nan
+        
+        # calculate scores taking into account angle and distance of each vertex pair
+        scores = (diff_normals-np.nanmean(diff_normals)) + (diff_euclid-np.nanmean(diff_euclid))
+    
+        # get the candidate with the best score for each vertex (allowing repetitions)
+        for row in range(scores.shape[0]):
+            row_min = np.nanmin(scores[row])
+            if np.isnan(row_min):
                 pass
-
-            missing = np.where(voronoi_seed_idx==-1)[0].shape[0]
-            if missing == 0:
-                break
-
-        # if the tree is empty, but there are still seeds missing, increase the number of nearest neighbours
-        # and repeat procedure, but only for those simple vertices that have not been matched yet
-        log(log_file, 'missing %i'%(missing))
+            else:
+                idx = np.where(scores[row] == row_min)[0][0]
+                voronoi_seed_idx[idx] = mapping[row, idx]
+        
+        # find those vertices that didn't have a single valid candidate in the first round
         remaining_idxs = np.where(voronoi_seed_idx==-1)[0]
+        
         neighbours *= 5
-
+    
     return voronoi_seed_idx, inaccuracy, log_file
 
 
