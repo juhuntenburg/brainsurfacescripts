@@ -93,48 +93,28 @@ def find_voronoi_seeds(simple_vertices, simple_faces,
     simple_normals = calculate_normals(simple_vertices, simple_faces)
     complex_normals = calculate_normals(complex_vertices, complex_faces)
     
-    # prepare array to store seeds
-    voronoi_seed_idx = np.zeros((simple_vertices.shape[0],), dtype='int64') -1
-    
     # initialize with all vertices and small number of neighbours
     remaining_idxs = range(simple_vertices.shape[0])
-    neighbours = 100
+    neighbours = 500
     
-    while np.any(voronoi_seed_idx==-1):
-        
-        log(log_file, 'producing nearest neighbours k=%i'%(neighbours))
-        inaccuracy, mapping  = spatial.KDTree(complex_vertices).query(simple_vertices[remaining_idxs], k=neighbours)
-        
-        # create tidy long-format lists
-        simple_idxs = np.asarray([neighbours*[simple_idx] for simple_idx in remaining_idxs]).flatten()
-        candidate_idxs = mapping.flatten()
+    log(log_file, 'producing nearest neighbours k=%i'%(neighbours))
+    inaccuracy, mapping  = spatial.KDTree(complex_vertices).query(simple_vertices, k=neighbours)
     
-        # for each vertex pair calculate the angle between their normals
-        diff_normals, _ = compare_normals(simple_normals[simple_idxs], complex_normals[candidate_idxs])
-        diff_normals = diff_normals.reshape(mapping.shape)
-        diff_euclid = inaccuracy
+    # create tidy long-format lists
+    simple_idxs = np.asarray([neighbours*[simple_idx] for simple_idx in remaining_idxs]).flatten()
+    candidate_idxs = mapping.flatten()
     
-        # set values with angele > cutoff to nan so they can easily be ignored subsequently
-        mask = np.where(diff_normals>cutoff_angle)
-        diff_normals[mask] = np.nan
-        diff_euclid[mask] = np.nan
-        
-        # calculate scores taking into account angle and distance of each vertex pair
-        scores = (diff_normals-np.nanmean(diff_normals)) + (diff_euclid-np.nanmean(diff_euclid))
+    # for each vertex pair calculate the angle between their normals
+    diff_normals, _ = compare_normals(simple_normals[simple_idxs], complex_normals[candidate_idxs])
+    diff_normals = diff_normals.reshape(mapping.shape)
+    diff_euclid = inaccuracy
     
-        # get the candidate with the best score for each vertex (allowing repetitions)
-        for row in range(scores.shape[0]):
-            row_min = np.nanmin(scores[row])
-            if np.isnan(row_min):
-                pass
-            else:
-                idx = np.where(scores[row] == row_min)[0][0]
-                voronoi_seed_idx[idx] = mapping[row, idx]
-        
-        # find those vertices that didn't have a single valid candidate in the first round
-        remaining_idxs = np.where(voronoi_seed_idx==-1)[0]
-        
-        neighbours *= 5
+    log(log_file, 'find best mapping k=%i'%(neighbours))
+    # calculate scores taking into account angle and distance of each vertex pair
+    scores = (diff_normals-np.nanmean(diff_normals)) + (diff_euclid-np.nanmean(diff_euclid))
+    
+    # get the candidate with the best score for each vertex (allowing repetitions)
+    voronoi_seed_idx = mapping[(np.asarray(range(mapping.shape[0])), np.argmin(scores, axis=1))]
     
     return voronoi_seed_idx, inaccuracy, log_file
 
