@@ -13,7 +13,8 @@ def plot_surf_stat_map(coords, faces, stat_map=None,
                        bg_on_stat=False,
                        alpha='auto',
                        darkness=1,
-                       vmax=None, symmetric_cbar="auto",
+                       vmin=None, vmax=None, 
+                       symmetric_cbar="auto",
                        figsize=None,
                        labels=None, label_cpal=None,
                        mask=None, mask_lenient=None,
@@ -92,9 +93,11 @@ def plot_surf_stat_map(coords, faces, stat_map=None,
 
             # Call _get_plot_stat_map_params to derive symmetric vmin and vmax
             # And colorbar limits depending on symmetric_cbar settings
-            cbar_vmin, cbar_vmax, vmin, vmax = \
-                _get_plot_stat_map_params(stat_map_faces, vmax,
-                                          symmetric_cbar, kwargs)
+            if symmetric_cbar in [True, 'auto']:
+                cbar_vmin, cbar_vmax, vmin, vmax = \
+                    _get_plot_stat_map_params(stat_map_faces, vmax,
+                                              symmetric_cbar, kwargs)
+                
 
             if threshold is not None:
                 kept_indices = np.where(abs(stat_map_faces) >= threshold)[0]
